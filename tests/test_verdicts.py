@@ -109,10 +109,24 @@ def test_tolerance_verdict_cases():
     assert ev.verdict_tolerance([{"delta": 1e-3, "hard_violates": False, "soft_violates": False}])[0] == "info"
 
 
+def test_a_window_of_a_single_point_is_reachable_only_as_a_tie_in_all_verdicts():
+    """Familie 1 bis 9, n = 8, Seed 100008, Schwelle 25 %: lo == hi == 1,5. Nicht „für kein λ“, sondern: einzelnes λ, nur im Gleichstand, Gleichstandsregel entscheidet."""
+    s = ev.Settings(8, 0, 100008, 25, 2, 0)
+    a = ev.analyse(s)
+    ts, ls = ev.threshold_summary(a), ev.lam_summary(a)
+    assert ls["reachable"] and ls["point"] and ls["lo"] == ls["hi"] == 1.5
+    kind, text = ev.verdict_lambda(ls, ts)
+    assert kind == "info" and "kein λ" not in text and "trifft ihn nur für das einzelne λ = 1,50, und dort nur im Gleichstand mit anderen Plänen" in text and "Gleichstandsregel" in text
+    kind, text = ev.verdict_penalty(ev.penalty_result(a, "weighted", 1.0), ts, ls)
+    assert "kein λ" not in text and "das harte Optimum ist nur für das einzelne λ = 1,50 ein Minimierer der Gewichtssumme, und dort nur im Gleichstand" in text
+    ok = ev.lam_summary(ev.analyse(ev.Settings(8, 0, 53, 50, 2, 6)))
+    assert not ok["reachable"] and not ok["point"] and ok["lo"] > ok["hi"]                  # das Preset „Die Gewichtssumme erreicht es nicht“ bleibt ein leeres Fenster
+
+
 def test_sweep_verdicts_carry_the_phase_zero_numbers():
     shift = ev.shift_sweep()
     kind, text = ev.verdict_shift_sweep(shift)
-    assert kind == "info" and "K = 9, Schwelle 25 %: A steigt um Median 58,4 % (bis 145,5 %)" in text and "Gewichtssumme erreicht in 13 von 20" in text
+    assert kind == "info" and "K = 9, Schwelle 25 %: A steigt um Median 58,4 % (bis 145,5 %)" in text and "Gewichtssumme erreicht in 15 von 20 (davon nur für ein einziges λ, im Gleichstand: 2; dort wählt die Gleichstandsregel den Zielplan in 0)" in text and "Gewichtssumme erreicht in 10 von 20; K = 99, Schwelle 50 %" in text
     small = ev.small_lam_sweep()
     assert [small[("linear", 0, lam)]["violated"] for lam in (0.25, 1.0, 4.0, 8.0)] == [18, 6, 2, 0] and [small[("linear", 2, lam)]["violated"] for lam in (1.0, 8.0)] == [12, 4]
     assert "K = 9, λ = 1: 6 von 20" in ev.verdict_small_lam_sweep(small)[1]

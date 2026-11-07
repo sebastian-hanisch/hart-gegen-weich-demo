@@ -60,7 +60,7 @@ def build_reach_bars(res: dict, total: int = 20):
     fig = go.Figure([go.Bar(x=[f"Schwelle {t} %" for t in taus], y=[res[(f, t)]["reach"] for t in taus], name=("K = " + str(C.GRANULARITIES[f])) if C.GRANULARITIES[f] else "reell",
                             marker_color=FAM_COLORS[f]) for f in fams])
     fig.update_layout(barmode="group")
-    fig.update_yaxes(range=[0, total], title_text=f"Gewichtssumme erreicht das harte Optimum (von {total})")
+    fig.update_yaxes(range=[0, total], title_text=f"Gewichtssumme erreicht das harte Optimum, auch nur im Gleichstand (von {total})")
     return _base(fig, height=320)
 
 

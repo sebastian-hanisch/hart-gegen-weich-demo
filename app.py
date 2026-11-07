@@ -25,6 +25,7 @@ from hgw_evaluation import (
     pct,
     penalty_result,
     plan_text,
+    point_window_text,
     shift_sweep,
     small_lam_sweep,
     threshold_summary,
@@ -211,7 +212,9 @@ st.markdown("---")
 st.subheader("🔬 Die Gewichtssumme")
 st.caption("Die Gewichtssumme `A + λ·B` sieht die Schwelle nicht. Sie findet nur Pläne auf der unteren Hülle der Punkte (A, B) (Stück 3); das harte Optimum liegt oft nicht darauf. Wählen Sie links „Gewichtssumme“.")
 if a.mode == "enum":
-    if ls["reachable"]:
+    if ls["point"]:
+        st.info(f"Der Zielplan ist {point_window_text(ls)}.")
+    elif ls["reachable"]:
         st.info(f"Der Zielplan ist für λ ≥ {lam_text(ls['lo'])}" + ("" if ls["hi"] == float("inf") else f" bis {lam_text(ls['hi'])}") + " ein Minimierer der Gewichtssumme.")
     else:
         st.warning(f"Für **kein** λ ist der Zielplan ein Minimierer der Gewichtssumme (untere Grenze {lam_text(ls['lo'])}, obere {lam_text(ls['hi'])}): die Schwelle im Strafterm erreicht, was ein Gewicht nicht erreicht.")
@@ -310,7 +313,7 @@ with st.expander("📐 Mathematische Formulierung"):
 
 **$\lambda^*$.** Die Strafe $A + \lambda v^p$ wählt den Zielplan genau dann, wenn für jeden Plan $\pi$ mit $A(\pi) < A(\pi^*)$ und $v(\pi) > v(\pi^*)$ gilt $\lambda \ge \dfrac{A(\pi^*) - A(\pi)}{v(\pi)^p - v(\pi^*)^p}$. Also $\lambda^*_p = \max$ dieser Quotienten (0, wenn es keinen solchen Plan gibt). Bei ganzen Zahlen ist $v \ge 1$ und daher $\lambda^*_1 \le A(\pi^*) - A_{\min}$. Skaliert man $b$ mit $c$, so $\lambda^*_1 \to \lambda^*_1 / c$ und $\lambda^*_2 \to \lambda^*_2 / c^2$.
 
-**Gewichtssumme.** $A(\pi^*) + \lambda B(\pi^*) \le A(\pi) + \lambda B(\pi)$ für alle $\pi$ ergibt: Pläne mit $B > B^*$ geben die untere Schranke $\lambda \ge \max \frac{A^* - A}{B - B^*}$, Pläne mit $B < B^*$ die obere $\lambda \le \min \frac{A - A^*}{B^* - B}$. Das Fenster ist leer, wenn der Zielplan nicht auf der unteren Hülle liegt.
+**Gewichtssumme.** $A(\pi^*) + \lambda B(\pi^*) \le A(\pi) + \lambda B(\pi)$ für alle $\pi$ ergibt: Pläne mit $B > B^*$ geben die untere Schranke $\lambda \ge \max \frac{A^* - A}{B - B^*}$, Pläne mit $B < B^*$ die obere $\lambda \le \min \frac{A - A^*}{B^* - B}$. Das Fenster ist leer (untere Schranke über der oberen), wenn der Zielplan nicht auf der unteren Hülle liegt; sind beide Schranken gleich, besteht es aus einem einzigen $\lambda$, und der Zielplan ist dort nur im Gleichstand mit anderen Plänen ein Minimierer.
 
 **Gleitkomma.** float64 hat 53 Bit Mantisse; ist $\lambda v \ge 2^{53}$, ändert das Addieren der Kosten $A$ die Summe nicht mehr, und Pläne mit gleicher Verletzung sind in der Strafe nicht mehr zu unterscheiden.
 

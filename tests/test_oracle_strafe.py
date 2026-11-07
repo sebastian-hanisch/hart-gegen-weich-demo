@@ -115,6 +115,8 @@ def test_the_weighted_window_matches_a_grid_of_weights(n, family, seed):
             assert is_min, lam
         elif lam < lo - 1e-9 or lam > hi + 1e-9:
             assert not is_min, lam
+        elif lo <= hi and lam in (lo, hi):
+            assert is_min, lam                                   # Randpunkt (auch bei lo == hi): Minimierer, im Gleichstand
 
 
 @pytest.mark.parametrize("n,family,seed", [(5, 0, 1), (6, 0, 2), (6, 1, 3), (5, 2, 1), (6, 2, 4)])
@@ -152,10 +154,28 @@ def test_the_sweep_hit_counts_match_a_plain_python_recount_on_one_family():
         prob = A.make_problem(inst.arrays(), 6, True)
         T = A.threshold(prob, 50)
         lo, hi = A.weighted_window(prob, T)
-        count += lo < hi
+        count += A.window_reachable(lo, hi)
         t = _ref_target(plans, T)
         lo2 = max([Fraction(t[1] - a_) / (b_ - t[2]) for _, a_, b_ in plans if b_ > t[2]] + [Fraction(0)])
         hi2 = min([Fraction(a_ - t[1]) / (t[2] - b_) for _, a_, b_ in plans if b_ < t[2]] + [Fraction(10 ** 9)])
-        ref += lo2 < hi2
+        ref += lo2 <= hi2                                     # derselbe Begriff im Referenzweg: ein einzelner Punkt (lo == hi) zählt mit
     assert count == ref
-    assert ev.shift_sweep(fams=(0,), taus=(50,))[(0, 50)]["reach"] == 11
+    assert ev.shift_sweep(fams=(0,), taus=(50,))[(0, 50)]["reach"] == 13
+
+
+def test_a_window_of_a_single_point_counts_as_reachable_and_ties_with_other_plans():
+    """Familie 1 bis 9, n = 8, Seed 100008, Schwelle 25 %: lo == hi == 3/2. Referenz in reinem Python mit Fraction: der Zielplan minimiert A + λ·B bei λ = 3/2 (Gleichstand mit zwei anderen Plänen), bei keinem anderen λ."""
+    inst = make_instance(8, 0, 100008)
+    plans = _plans(inst)
+    prob = A.make_problem(inst.arrays(), 8, True)
+    T = A.threshold(prob, 25)
+    assert A.weighted_window(prob, T) == (1.5, 1.5)
+    t = _ref_target(plans, T)
+    for lam, expect_min in ((Fraction(3, 2), True), (Fraction(14, 10), False), (Fraction(16, 10), False)):
+        values = [a_ + lam * b_ for _, a_, b_ in plans]
+        assert (t[1] + lam * t[2] == min(values)) is expect_min, lam
+        if lam == Fraction(3, 2):
+            assert sum(v == min(values) for v in values) == 3
+    ls = ev.lam_summary(ev.analyse(ev.Settings(8, 0, 100008, 25, 0, 0)))
+    assert ls["reachable"] and ls["point"] and (ls["lo"], ls["hi"]) == (1.5, 1.5)
+    assert ev.shift_sweep(fams=(0,), taus=(25,))[(0, 25)]["point"] == 2

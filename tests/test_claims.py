@@ -82,8 +82,11 @@ def test_lambda_star_claims(shift):
 
 
 def test_weighted_claims(shift):
-    assert [[shift[(f, t)]["reach"] for t in (25, 50, 75)] for f in (0, 1, 2)] == [[13, 11, 14], [10, 12, 14], [9, 9, 11]]
-    for text in ("1 bis 9: **13 / 11 / 14**; 1 bis 99: **10 / 12 / 14**; reell: **9 / 9 / 11**",):
+    assert [[shift[(f, t)]["reach"] for t in (25, 50, 75)] for f in (0, 1, 2)] == [[15, 13, 16], [10, 12, 14], [9, 9, 11]]
+    assert [[shift[(f, t)]["point"] for t in (25, 50, 75)] for f in (0, 1, 2)] == [[2, 2, 2], [0, 0, 0], [0, 0, 0]]
+    assert [shift[(0, t)]["point_hit"] for t in (25, 50, 75)] == [0, 2, 0]
+    for text in ("1 bis 9: **15 / 13 / 16**; 1 bis 99: **10 / 12 / 14**; reell: **9 / 9 / 11**", "davon nur für ein einziges λ und nur im Gleichstand: 1 bis 9: **2 / 2 / 2**, sonst 0",
+                 "die Gleichstandsregel wählt dort in **2** von 6 den Zielplan"):
         _claim(text)
 
 

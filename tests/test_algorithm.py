@@ -36,6 +36,7 @@ def test_hand_example_lambda_star_and_window(hand_problem):
     p, T = hand_problem, 6.0
     assert A.lam_star(p, T, 1) == 3.0 and A.lam_star(p, T, 2) == 1.5
     assert A.weighted_window(p, T) == (3.0, 1.0)                      # leer: 3 > 1
+    assert not A.window_reachable(3.0, 1.0) and A.window_reachable(1.5, 1.5) and A.window_reachable(0.0, float("inf"))   # ein einzelner Punkt zählt als erreichbar
     assert A.int_bound(p, T) == 6.0                                    # A_Ziel - A_min = 11 - 5
 
 

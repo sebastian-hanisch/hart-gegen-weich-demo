@@ -42,6 +42,12 @@ def lam_text(lam: float) -> str:
     return value_text(lam) if float(lam).is_integer() else de(lam, 3 if lam < 0.1 else 2)
 
 
+def point_window_text(ls: dict, minimizer: bool = True) -> str:
+    """Fenster der Gewichtssumme aus einem einzigen λ: der Zielplan ist dort ein Minimierer, aber nur im Gleichstand mit mindestens zwei anderen Plänen (auf einer Kante der unteren Hülle)."""
+    return (f"nur für das einzelne λ = {lam_text(ls['lo'])}" + (" ein Minimierer der Gewichtssumme" if minimizer else "") + ", und dort nur im Gleichstand mit anderen Plänen (er liegt auf einer Kante der unteren Hülle der Punkte (A, B)); "
+            f"welchen der gleich guten Pläne sie wählt, entscheidet die Gleichstandsregel (kleinste Verletzung, dann der erste Plan der Aufzählung)")
+
+
 def delta_text(d: float) -> str:
     """Abstand als Potenz von 10: 1e-05 -> „10^-5“."""
     k = int(round(np.log10(d)))
@@ -128,10 +134,10 @@ def penalty_result(a: Analysis, form: str, lam: float) -> dict:
 
 
 def lam_summary(a: Analysis) -> dict:
-    """lam* der linearen und der quadratischen Strafe, Fenster der Gewichtssumme, Schranke bei ganzen Zahlen."""
+    """lam* der linearen und der quadratischen Strafe, Fenster der Gewichtssumme (reachable: nicht leer; point: ein einziges lam, nur im Gleichstand), Schranke bei ganzen Zahlen."""
     p = a.prob
     lo, hi = A.weighted_window(p, a.T)
-    return {"lin": A.lam_star(p, a.T, 1), "quad": A.lam_star(p, a.T, 2), "lo": lo, "hi": hi, "reachable": lo < hi, "bound": A.int_bound(p, a.T), "feasible": A.feasible(p, a.T)}
+    return {"lin": A.lam_star(p, a.T, 1), "quad": A.lam_star(p, a.T, 2), "lo": lo, "hi": hi, "reachable": A.window_reachable(lo, hi), "point": bool(lo == hi), "bound": A.int_bound(p, a.T), "feasible": A.feasible(p, a.T)}
 
 
 LAM_CURVE_EXPS = tuple(range(-3, 13)) + (16, 20, 30, 40, 50, 53, 56, 60)
@@ -196,12 +202,12 @@ def _q3(vals) -> tuple[float, float, float]:
 
 
 def shift_sweep(fams=(0, 1, 2), taus=C.SWEEP_TAUS) -> dict:
-    """Je Familie und Schwelle: Anstieg von A des harten Optimums (Min/Median/Max), Instanzen ohne Wirkung, lam* linear und quadratisch, Gewichtssumme erreicht."""
+    """Je Familie und Schwelle: Anstieg von A des harten Optimums (Min/Median/Max), Instanzen ohne Wirkung, lam* linear und quadratisch, Gewichtssumme erreicht (Fenster nicht leer; davon nur ein einziges lam: point, und dort wählt die Gleichstandsregel den Zielplan: point_hit)."""
     out = {}
     for fam in fams:
         probs = _problems(fam)
         for tau in taus:
-            rises, lin, quad, none, reach, weak = [], [], [], 0, 0, 0
+            rises, lin, quad, none, reach, point, point_hit = [], [], [], 0, 0, 0, 0
             for _, _, p in probs:
                 T = A.threshold(p, tau)
                 t = A.target(p, T)
@@ -211,9 +217,11 @@ def shift_sweep(fams=(0, 1, 2), taus=C.SWEEP_TAUS) -> dict:
                 lin.append(A.lam_star(p, T, 1))
                 quad.append(A.lam_star(p, T, 2))
                 lo, hi = A.weighted_window(p, T)
-                reach += lo < hi
-                weak += lo <= hi
-            out[(fam, tau)] = {"rise": _q3(rises), "none": int(none), "lin": _q3(lin), "quad": _q3(quad), "reach": int(reach), "weak": int(weak), "seeds": len(probs)}
+                reach += A.window_reachable(lo, hi)
+                if lo == hi:        # ein einziges lam: dort nur im Gleichstand; die Gleichstandsregel (kleinste Verletzung, dann erster Plan) entscheidet, ob der Zielplan gewählt wird
+                    point += 1
+                    point_hit += A.hit(p, T, A.chosen(p, T, "weighted", lo))
+            out[(fam, tau)] = {"rise": _q3(rises), "none": int(none), "lin": _q3(lin), "quad": _q3(quad), "reach": int(reach), "point": int(point), "point_hit": int(point_hit), "seeds": len(probs)}
     return out
 
 
@@ -338,20 +346,21 @@ def verdict_penalty(r: dict, ts: dict, ls: dict) -> tuple[str, str]:
     if r["v"] > 0:
         extra = ""
         if r["form"] == "weighted":
-            extra = (" Die Gewichtssumme sieht die Schwelle nicht: " + ("kein λ trifft das harte Optimum." if not ls["reachable"] else ("das harte Optimum ist nur für λ ≥ " + lam_text(ls["lo"]) + ("" if not np.isfinite(ls["hi"]) else " bis " + lam_text(ls["hi"])) + " ein Minimierer.")))
+            extra = (" Die Gewichtssumme sieht die Schwelle nicht: " + ("kein λ trifft das harte Optimum." if not ls["reachable"] else (f"das harte Optimum ist {point_window_text(ls)}." if ls["point"] else "das harte Optimum ist nur für λ ≥ " + lam_text(ls["lo"]) + ("" if not np.isfinite(ls["hi"]) else " bis " + lam_text(ls["hi"])) + " ein Minimierer.")))
         else:
             need = ls["lin"] if r["form"] == "linear" else ls["quad"]
             extra = f" Ab λ = {lam_text(need)} würde sie das harte Optimum wählen."
         return "warning", (f"Bei λ = {lam} wählt die {name} einen Plan, der die Schwelle um **{value_text(r['v'])}** überschreitet (B = {value_text(r['b'])} statt höchstens {value_text(ts['T'])}); "
                            f"er kostet A = {value_text(r['a'])} statt {value_text(r['a_t'])}, also **{pct(r['gain'])} weniger, weil er die Schwelle bricht**.{extra}")
     return "info", (f"Bei λ = {lam} wählt die {name} einen zulässigen Plan, aber nicht das harte Optimum: A = {value_text(r['a'])} statt {value_text(r['a_t'])} "
-                    f"({pct((r['a'] - r['a_t']) / r['a_t'])} mehr)." + (" Die Gewichtssumme sieht die Schwelle nicht: ein zulässiger Plan ist Zufall" + (" und kein λ trifft das harte Optimum." if not ls["reachable"] else ".")))
+                    f"({pct((r['a'] - r['a_t']) / r['a_t'])} mehr)." + (" Die Gewichtssumme sieht die Schwelle nicht: ein zulässiger Plan ist Zufall" + (" und kein λ trifft das harte Optimum." if not ls["reachable"] else (f"; das harte Optimum ist {point_window_text(ls)}." if ls["point"] else "."))))
 
 
 def verdict_lambda(ls: dict, ts: dict) -> tuple[str, str]:
     """Experiment λ*: ab welchem Gewicht ist die Strafe exakt, und erreicht die Gewichtssumme es?"""
     tail = ("Die Gewichtssumme A + λ·B trifft ihn für **kein λ**: er liegt nicht auf der unteren Hülle der Punkte (A, B)." if not ls["reachable"]
-            else (f"Die Gewichtssumme A + λ·B trifft ihn nur für λ ≥ {lam_text(ls['lo'])}." if not np.isfinite(ls["hi"])
+            else (f"Die Gewichtssumme A + λ·B trifft ihn {point_window_text(ls, minimizer=False)}." if ls["point"]
+                  else f"Die Gewichtssumme A + λ·B trifft ihn nur für λ ≥ {lam_text(ls['lo'])}." if not np.isfinite(ls["hi"])
                   else f"Die Gewichtssumme A + λ·B trifft ihn nur für λ zwischen {lam_text(ls['lo'])} und {lam_text(ls['hi'])}."))
     what = "den Plan mit der kleinsten Verletzung" if not ts["feasible"] else "das harte Optimum"
     if ls["lin"] == 0 and ls["quad"] == 0:
@@ -409,7 +418,7 @@ def verdict_shift_sweep(res: dict) -> tuple[str, str]:
     for (fam, tau), r in res.items():
         lo, med, hi = r["rise"]
         parts.append(f"{_fam(fam)}, Schwelle {tau} %: A steigt um Median {pct(med)} (bis {pct(hi)}), λ* linear Median {de(r['lin'][1], 2)} (Maximum {de(r['lin'][2], 2)}), quadratisch Median {de(r['quad'][1], 2)} "
-                     f"(Maximum {de(r['quad'][2], 2)}), Gewichtssumme erreicht in {r['reach']} von {r['seeds']}")
+                     f"(Maximum {de(r['quad'][2], 2)}), Gewichtssumme erreicht in {r['reach']} von {r['seeds']}" + (f" (davon nur für ein einziges λ, im Gleichstand: {r['point']}; dort wählt die Gleichstandsregel den Zielplan in {r['point_hit']})" if r["point"] else ""))
     return "info", f"Schwelle, λ* und Gewichtssumme, n = {C.SWEEP_N}, je {len(C.SWEEP_SEEDS)} feste Instanzen: " + "; ".join(parts) + "."
 
 

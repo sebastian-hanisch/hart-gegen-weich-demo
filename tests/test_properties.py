@@ -115,7 +115,7 @@ def test_the_hard_optimum_value_does_not_depend_on_the_numbering(n, family, seed
         assert A.lam_star(p2, T2, 1) == pytest.approx(A.lam_star(p, T, 1))
         lo, hi = A.weighted_window(p, T)
         lo2, hi2 = A.weighted_window(p2, T2)
-        assert (lo < hi) == (lo2 < hi2)
+        assert (lo <= hi) == (lo2 <= hi2)
 
 
 def test_everything_is_deterministic():

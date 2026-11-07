@@ -5,7 +5,7 @@ Zwei Matrizen A (Kosten, minimieren) und B (Zeit); ein Plan hat die Summen A(π)
   * Weich: Strafe auf die Verletzung v = max(0, B - T): linear A + lam*v, quadratisch A + lam*v^2; zum Vergleich die Gewichtssumme A + lam*B ohne Schwelle.
   * `target`: der Plan, den „hart“ meint: kleinste Verletzung, dann kleinstes A, dann kleinstes B, dann der erste Plan (bei zulässiger Schwelle das harte Optimum).
   * `lam_star`: kleinstes lam, ab dem das Strafoptimum den Zielplan enthält; exakt aus der endlichen Planmenge gerechnet (kein Gitter).
-  * `weighted_window`: Fenster der lam, in denen die Gewichtssumme den Zielplan minimiert (leer: er liegt nicht auf der unteren Hülle).
+  * `weighted_window`: Fenster der lam, in denen die Gewichtssumme den Zielplan minimiert (leer: er liegt nicht auf der unteren Hülle; ein einzelner Punkt: er ist nur im Gleichstand ein Minimierer).
   * `highs_plan`: dasselbe als ganzzahliges Programm mit Schlupfvariable (HiGHS über scipy.optimize.milp, Voreinstellungen) oder mit harter Nebenbedingung.
 Der Minimierer bei Gleichstand der Strafe ist der Plan mit der kleinsten Verletzung, dann der erste der Aufzählung (siehe README).
 Quelle: Aufzählung und HiGHS-Aufruf stammen aus Stück 1 bis 5 der Linie (zielvergleich-demo bis gleichstand-demo); neu sind Schwelle, Zielplan, lam*, Fenster, Schlupf-Fall.
@@ -135,13 +135,19 @@ def lam_star(p: Problem, T: float, power: int = 1) -> float:
 
 def weighted_window(p: Problem, T: float) -> tuple[float, float]:
     """Fenster [lo, hi] der lam >= 0, in denen A + lam*B den Zielplan minimiert.
-    Aus A_t + lam*B_t <= A + lam*B: Pläne mit B > B_t geben die untere, Pläne mit B < B_t die obere Schranke. Leer, wenn lo >= hi."""
+    Aus A_t + lam*B_t <= A + lam*B: Pläne mit B > B_t geben die untere, Pläne mit B < B_t die obere Schranke. Leer, wenn lo > hi;
+    bei lo == hi besteht das Fenster aus einem einzigen lam (der Zielplan liegt auf einer Kante der unteren Hülle und ist dort ein Minimierer im Gleichstand)."""
     t = target(p, T)
     a_t, b_t = p.sA[t], p.sB[t]
     more, less = p.sB > b_t, p.sB < b_t
     lo = max(0.0, float(np.max((a_t - p.sA[more]) / (p.sB[more] - b_t)))) if more.any() else 0.0
     hi = float(np.min((p.sA[less] - a_t) / (b_t - p.sB[less]))) if less.any() else float("inf")
     return lo, hi
+
+
+def window_reachable(lo: float, hi: float) -> bool:
+    """Der Zielplan minimiert A + lam*B für mindestens ein lam: das Fenster ist nicht leer (lo <= hi; lo == hi ist ein einzelner Punkt und zählt mit)."""
+    return bool(lo <= hi)
 
 
 def int_bound(p: Problem, T: float) -> float | None:
