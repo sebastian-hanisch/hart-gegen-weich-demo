@@ -7,7 +7,7 @@ GRANULARITIES = (9, 99, 0)                    # ganze Zahlen 1 bis K; 0: reell g
 FAMILIES = ("Ganze Zahlen 1 bis 9", "Ganze Zahlen 1 bis 99", "Reell gleichverteilt 0 bis 100")
 DEFAULT_FAMILY = 0
 
-# Schwelle T = Bmin + tau * (B(Kostenoptimum) - Bmin); tau in Prozent. Unter 0 liegt T unter der kleinsten Zeitsumme (unzulässig).
+# Schwelle T = Bmin + tau * (B(Kostenoptimum) - Bmin); tau in Prozent. Unter 0 liegt T unter der kleinsten Zeitsumme (in der Regel unzulässig).
 TAU_MIN, TAU_MAX, TAU_STEP, DEFAULT_TAU = -50, 100, 5, 50
 
 PENALTIES = ("linear", "quadratic", "weighted")
@@ -49,5 +49,5 @@ PRESET_HELP = {
     "Kleinstes Beispiel (n = 3)": "Sechs Pläne: die lineare Strafe braucht λ ≥ 4, die quadratische λ ≥ 1,33, die Gewichtssumme erreicht das harte Optimum nie.",
     "Unzulässige Schwelle: weich liefert einen Plan": "Die Schwelle liegt unter der kleinsten Zeitsumme: hart ist unlösbar, die Strafe liefert den Plan mit der kleinsten Verletzung.",
     "Zu großes Gewicht in float64": "Dieselbe unzulässige Schwelle mit λ = 2⁵⁶: A geht in float64 verloren, die Strafe wählt einen Plan mit zu hohen Kosten.",
-    "HiGHS wird bei λ = 10¹² steif (reell)": "Bei reellen Werten und λ ≈ 10¹² liefert HiGHS einen zulässigen Plan, der fast doppelt so viel kostet wie das harte Optimum.",
+    "HiGHS wird bei λ = 10¹² steif (reell)": "Bei reellen Werten und λ ≈ 10¹² liefert HiGHS einen zulässigen Plan, der rund 87 % mehr kostet als das harte Optimum.",
 }

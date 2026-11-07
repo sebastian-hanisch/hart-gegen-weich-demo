@@ -384,7 +384,7 @@ def verdict_highs(rows: list[dict]) -> tuple[str, str]:
     if bad:
         worst = max(bad, key=lambda r: r["loss"])
         return "warning", (f"HiGHS liefert bei {len(bad)} Gewichten einen zulässigen Plan, der **nicht** das harte Optimum ist: am schlechtesten bei {worst['label'].split(', ')[1]} mit {pct(worst['loss'])} höheren Kosten. "
-                           f"Die Strafe wird numerisch steif, ohne dass jemand eine Warnung sieht.")
+                           f"Der Löser meldet dazu keine Warnung (Status „optimal“); die Ursache ist nicht untersucht.")
     if viol:
         return "info", f"Bei {len(viol)} der {len(rows) - 1} Gewichte ist die Strafe zu klein: HiGHS wählt einen Plan, der die Schwelle verletzt (zuletzt bei {viol[-1]['label'].split(', ')[1]}); darüber trifft es das harte Optimum."
     return "info", f"HiGHS trifft das harte Optimum bei allen {len(rows) - 1} Gewichten des Gitters."

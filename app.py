@@ -111,7 +111,7 @@ Weiter unten: **🔬 Die Schwelle**, **🔬 Das Strafgewicht**, **🔬 Die Gewic
 with st.expander("So funktioniert der Vergleich", expanded=True):
     st.markdown(
         """
-1. **Die Schwelle** gilt für die Zeitsumme B eines Plans. Das **harte Optimum** hat die kleinsten Kosten A unter allen Plänen mit B ≤ T. Sie liegt zwischen der kleinsten möglichen Zeitsumme und der Zeitsumme des Kostenoptimums (Regler „Schwelle“); unter 0 % ist sie unzulässig.
+1. **Die Schwelle** gilt für die Zeitsumme B eines Plans. Das **harte Optimum** hat die kleinsten Kosten A unter allen Plänen mit B ≤ T. Sie liegt zwischen der kleinsten möglichen Zeitsumme und der Zeitsumme des Kostenoptimums (Regler „Schwelle“); unter 0 % ist sie in der Regel unzulässig.
 2. **Drei Strafformen:** linear `A + λ·v`, quadratisch `A + λ·v²` und zum Vergleich die **Gewichtssumme** `A + λ·B` ohne Schwelle (Stück 3). Das Gewicht λ ist eine Potenz von 2 (exakt in float64).
 3. **λ\\*** ist das kleinste Gewicht, ab dem die Strafe das harte Optimum wählt; es wird exakt aus der endlichen Planmenge gerechnet. Bei Gleichstand der Strafe gewinnt der Plan mit der kleineren Verletzung, dann der erste der Aufzählung.
 4. **Messungen, kein Satz:** Alle Zahlen sind Zählungen und Spannen über feste Instanzen dieser Familien; die Löser-Zahlen gelten für HiGHS in der benutzten Version.
@@ -135,7 +135,7 @@ with st.sidebar:
     st.button("🎲 Neue Instanz generieren", width="stretch", on_click=randomize_seed)
     st.markdown("**Schwelle**")
     tau = st.slider("Schwelle T in Prozent des Wegs vom Zeitminimum zum Kostenoptimum", *bounds("tau_slider"), key="tau_slider", step=C.TAU_STEP,
-                    help="100 %: die Schwelle bindet nicht (das Kostenoptimum erfüllt sie); 0 %: nur der schnellste Plan ist zulässig; unter 0 %: kein Plan ist zulässig.")
+                    help="100 %: die Schwelle bindet nicht (das Kostenoptimum erfüllt sie); 0 %: nur Pläne mit der kleinsten Zeitsumme sind zulässig; unter 0 %: in der Regel kein Plan zulässig (bei kleinem n kann das Kostenoptimum zugleich das schnellste sein).")
     st.markdown("**Strafterm**")
     penalty = st.selectbox("Strafform", list(range(len(C.PENALTIES))), key="penalty_select", format_func=lambda i: C.PENALTY_NAMES[C.PENALTIES[i]],
                            help="Linear und quadratisch sehen die Schwelle; die Gewichtssumme nicht.")
@@ -289,7 +289,7 @@ st.markdown(
 | Annahme | Was passiert, wenn sie verletzt ist | Wer setzt an |
 |---|---|---|
 | **Eine Schwelle auf der Summe von B** | Mehrere Schwellen, eine Schwelle auf dem Maximum (Engpass) oder Nebenbedingungen auf den Plänen selbst ändern λ* und die Fenster; nicht gemessen | Stück 3 (Zwei Kriterien) |
-| **Endliche Planmenge** | Hier ist **jede** Strafe ab einem endlichen Gewicht exakt, weil es nur endlich viele Verletzungen gibt; im stetigen Fall braucht die quadratische Strafe ein Gewicht gegen unendlich | Straf-/Barriere-Verfahren (Nichtlineare Optimierung) |
+| **Endliche Planmenge** | Hier ist **jede** Strafe in exakter Rechnung ab einem endlichen Gewicht exakt, weil es nur endlich viele Verletzungen gibt; im stetigen Fall braucht die quadratische Strafe ein Gewicht gegen unendlich | Straf-/Barriere-Verfahren (Nichtlineare Optimierung) |
 | **Die Einheit von B** | λ* der linearen Strafe skaliert mit 1/c, das der quadratischen mit 1/c², wenn man B mit c multipliziert: das Gewicht hat eine Einheit | – |
 | **HiGHS in einer Version** | Gemessen ist `scipy.optimize.milp` (HiGHS) mit Voreinstellungen in der benutzten Version; andere Löser und Versionen können andere Toleranzen und andere Grenzen der Steifheit haben. Die Ursache der Fehlwahl bei λ ≈ 10¹² ist nicht untersucht | Dokumentation des Lösers |
 | **n = 8 aufgezählt, HiGHS bis n = 12** | Schwelle, λ*, Fenster und Zielplan-Vergleich gibt es nur bis n = 8; darüber nur HiGHS | – |

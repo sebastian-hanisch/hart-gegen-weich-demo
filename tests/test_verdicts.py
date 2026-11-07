@@ -93,7 +93,7 @@ def test_highs_verdicts():
     s, a = _a(P_HIGHS)
     rows = ev.highs_rows(a, s.lam)
     kind, text = ev.verdict_highs(rows)
-    assert kind == "warning" and "bei 3 Gewichten einen zulässigen Plan" in text and "86,9 %" in text and "numerisch steif" in text
+    assert kind == "warning" and "bei 3 Gewichten einen zulässigen Plan" in text and "86,9 %" in text and "keine Warnung" in text
     s, a = _a(P_SMALL)
     kind, text = ev.verdict_highs(ev.highs_rows(a, s.lam))
     assert kind == "info" and "Bei 2 der 10 Gewichte ist die Strafe zu klein" in text and "zuletzt bei λ = 1)" in text
